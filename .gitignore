@@ -1,0 +1,11 @@
+# Python bytecode
+venv/
+
+# Virtual environemnt
+__pycache__/
+
+# csv's and other data
+*.csv
+
+# png's
+*.png
