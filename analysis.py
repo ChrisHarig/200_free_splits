@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import seaborn as sns
+import os
 
 # Read the CSV
 splits_df = pd.read_csv('data/swim_splits.csv')
@@ -111,7 +112,11 @@ def calculate_rank_correlations(analysis_df):
 def plot_correlation_matrix(analysis_df):
     """
     Creates a correlation matrix heatmap for all split-related metrics.
-    --->In Progress<---
+    --->- No one split difference is correlated with final time
+        - Both the fade from the initial pace to the third 50 (split3_1) 
+        and the fade from the initial pace to the fourth 50 (split4_1) are 
+        correlated with std_dev, but the third 50 accounts for more variance .98 > .94
+        - IN PROGRESS<---
     Args:
         analysis_df (pd.DataFrame): DataFrame containing the analysis data
     """
@@ -130,19 +135,77 @@ def plot_correlation_matrix(analysis_df):
     # Create heatmap
     plt.figure(figsize=(12, 10))
     sns.heatmap(corr_matrix, 
-                annot=True,          # Show correlation values
-                cmap='RdBu',         # Red-Blue diverging colormap
-                center=0,            # Center the colormap at 0
-                fmt='.2f',           # Round to 2 decimal places
-                square=True)         # Make cells square
+                annot=True,          
+                cmap='RdBu',         
+                center=0,           
+                fmt='.2f',          
+                square=True)         
     
-    plt.title('Correlation Matrix of Swimming Metrics')
+    plt.title('Correlation Matrix Team Wide')
     plt.tight_layout()
-    plt.show()
+    plt.savefig('team_plots/correlation_matrix.png')
+    plt.close()
     
     return corr_matrix
 
 #corr_matrix = plot_correlation_matrix(analysis_df)
+
+def plot_group_correlation_matrix(analysis_df, group_name, include=True):
+    """
+    Creates a correlation matrix heatmap for split-related metrics, either including or excluding a specific group.
+    Automatically detects if group_name exists in Stroke or Coach columns, and plots the data for that group if 
+    include is True, or plots the data for all other groups if include is False.
+    --->IN PROGRESS<----
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data
+        group_name (str): Name of group to analyze (e.g. 'fly', 'free', 'Logan')
+        include (bool): If True, only include specified group. If False, exclude specified group.
+    """
+    # Check if group exists in Stroke or Coach columns
+    if group_name in analysis_df['Stroke'].unique():
+        group_type = 'Stroke'
+    elif group_name in analysis_df['Group'].unique():
+        group_type = 'Group'
+    else:
+        raise ValueError(f"'{group_name}' not found in either Stroke or Coach columns")
+        
+    # Filter dataframe based on include/exclude flag
+    if include:
+        group_df = analysis_df[analysis_df[group_type] == group_name]
+        suffix = f"{group_type.lower()}_{group_name}"
+    else:
+        group_df = analysis_df[analysis_df[group_type] != group_name]
+        suffix = f"no_{group_type.lower()}_{group_name}"
+    
+    # Select relevant columns for correlation
+    cols_to_correlate = [
+        'Final', 'std_dev',
+        'split4_3', 'split4_2', 'split4_1',
+        'split3_2', 'split3_1', 'split2_1',
+        'hundred_diff',
+        'first_100', 'second_100'
+    ]
+    
+    # Calculate correlation matrix
+    group_corr = group_df[cols_to_correlate].corr()
+    
+    # Create heatmap
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(group_corr, 
+                annot=True,          
+                cmap='RdBu',         
+                center=0,           
+                fmt='.2f',          
+                square=True)         
+    
+    plt.title(f'Correlation Matrix - {group_type}: {group_name}')
+    plt.tight_layout()
+    plt.savefig(f'team_plots/correlation_matrix_{suffix}.png')
+    plt.close()
+
+    return group_corr
+
+corr_matrix = plot_group_correlation_matrix(analysis_df, 'Logan', True)
 
 
 

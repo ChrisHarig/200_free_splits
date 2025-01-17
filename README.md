@@ -34,7 +34,7 @@ Plots are saved to:
 ## Usage
 Ensure data files are in the `data/` directory in the specified format, or modify the scripts to read from different directories or formats.
 
-## Findings
+## Results
 Using data from the ASU men's swim team:
 
 - We find there is no relationship between variance and performance
@@ -42,5 +42,10 @@ Using data from the ASU men's swim team:
   - Variance vs performance
   - Drop-off vs Performance  
   - 100 Split Difference vs Performance
-- Correlation matrix analysis is in progress
+  - In the team-wide correlation matrix: 
+    - No one split difference is correlated with final time
+    - Both the fade from the initial pace to the third 50 (split3_1) 
+    and the fade from the initial pace to the fourth 50 (split4_1) are 
+    correlated with std_dev, but the third 50 accounts for more variance .98 > .94
+    - IN PROGRESS
 
