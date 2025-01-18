@@ -155,7 +155,7 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     Creates a correlation matrix heatmap for split-related metrics, either including or excluding a specific group.
     Automatically detects if group_name exists in Stroke or Coach columns, and plots the data for that group if 
     include is True, or plots the data for all other groups if include is False.
-    --->IN PROGRESS<----
+    --->Results listed in next method<----
     Args:
         analysis_df (pd.DataFrame): DataFrame containing the analysis data
         group_name (str): Name of group to analyze (e.g. 'fly', 'free', 'Logan')
@@ -207,5 +207,86 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
 
 corr_matrix = plot_group_correlation_matrix(analysis_df, 'Logan', True)
 
+def plot_all_group_correlations(analysis_df):
+    """
+    Creates correlation matrices for each unique group/stroke, both including and excluding each group.
+    --->IN PROGRESS<----
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data
+    """
+    # Get unique groups from both Stroke and Group columns
+    strokes = analysis_df['Stroke'].unique()
+    groups = analysis_df['Group'].unique()
+    
+    # Create correlation matrices for each group
+    for group in strokes:
+        # Include 
+        plot_group_correlation_matrix(analysis_df, group, include=True)
+        # Exclude 
+        plot_group_correlation_matrix(analysis_df, group, include=False)
+        
+    for group in groups:
+        # Include 
+        plot_group_correlation_matrix(analysis_df, group, include=True)
+        # Exclude 
+        plot_group_correlation_matrix(analysis_df, group, include=False)
 
+# plot_all_group_correlations(analysis_df)
+
+def analyze_group_differences(analysis_df):
+    """
+    Analyzes how each group's correlations differ from the team average.
+    Only compares included groups vs team average.
+    --->IN PROGRESS<----
+    """
+    # Get team-wide correlation matrix as baseline
+    team_corr = plot_correlation_matrix(analysis_df)
+    
+    # Get unique groups from both Stroke and Group columns
+    strokes = analysis_df['Stroke'].unique()
+    groups = analysis_df['Group'].unique()
+    
+    # Set threshold for "meaningful" differences
+    diff_threshold = 0.15  # Adjust this value based on what you consider significant
+    
+    # Store notable differences
+    notable_diffs = []
+    
+    # Analyze each group type
+    for group_type, group_list in [('Stroke', strokes), ('Group', groups)]:
+        for group in group_list:
+            # Get group correlation matrix
+            group_df = analysis_df[analysis_df[group_type] == group]
+            group_corr = plot_correlation_matrix(group_df)  # Changed to regular correlation matrix
+            
+            # Calculate differences from team average
+            diff_matrix = group_corr - team_corr
+            
+            # Find meaningful differences
+            for i in range(len(diff_matrix.index)):
+                for j in range(i+1, len(diff_matrix.columns)):
+                    diff = diff_matrix.iloc[i,j]
+                    if abs(diff) >= diff_threshold:
+                        notable_diffs.append({
+                            'group_type': group_type,
+                            'group': group,
+                            'metric1': diff_matrix.index[i],
+                            'metric2': diff_matrix.columns[j],
+                            'team_corr': team_corr.iloc[i,j],
+                            'group_corr': group_corr.iloc[i,j],
+                            'difference': diff
+                        })
+    
+    # Convert to DataFrame and sort by absolute difference
+    results_df = pd.DataFrame(notable_diffs)
+    results_df['abs_diff'] = results_df['difference'].abs()
+    results_df = results_df.sort_values('abs_diff', ascending=False)
+    
+    print("\nNotable Correlation Differences from Team Average:")
+    print(results_df.to_string(index=False))
+    
+    return results_df
+
+#group_differences = analyze_group_differences(analysis_df)
+#print(group_differences)
 
