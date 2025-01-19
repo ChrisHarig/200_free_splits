@@ -49,3 +49,7 @@ Using data from the ASU men's swim team:
     correlated with std_dev, but the third 50 accounts for more variance .98 > .94
     - IN PROGRESS
 
+## Ideas
+- Compare each performer to the average and show differences
+- Compare NCAA top 16 performance average correlations to teams and groups
+- Compare NCAA top 16 performance average correlations to individuals

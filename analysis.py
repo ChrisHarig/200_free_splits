@@ -75,7 +75,7 @@ def plot_consistency_vs_performance(analysis_df, show_names=False):
 
 def calculate_rank_correlations(analysis_df):
     """
-    Calculates rank correlations between Consistency, Drop-off, and 100 Split Diff vs Performance.
+    Calculates rank correlations between Consistency, Drop-off, and 100 Split Diff vs Performance across the whole team.
     We use rank to normalize the data as to avoid problems with absolute differences in splits weighting the correlation.
     --->With the provided data, we find there is almost no correlation (-.08 to .000)<---
 
@@ -115,7 +115,9 @@ def plot_correlation_matrix(analysis_df):
     --->- No one split difference is correlated with final time
         - Both the fade from the initial pace to the third 50 (split3_1) 
         and the fade from the initial pace to the fourth 50 (split4_1) are 
-        correlated with std_dev, but the third 50 accounts for more variance .98 > .94
+        correlated with std_dev, but the third 50 accounts for more variance .94 > .90
+        - split2_1 and split3_1 are highly correlated (.99), split3_1 and split3_2 are also highly correlated (.98), indicating 
+        that one dropoff may account for the other, or there is a kind of physiological rule that forces this pattern.
         - IN PROGRESS<---
     Args:
         analysis_df (pd.DataFrame): DataFrame containing the analysis data
@@ -148,7 +150,7 @@ def plot_correlation_matrix(analysis_df):
     
     return corr_matrix
 
-#corr_matrix = plot_correlation_matrix(analysis_df)
+corr_matrix = plot_correlation_matrix(analysis_df)
 
 def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     """
@@ -205,7 +207,8 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
 
     return group_corr
 
-corr_matrix = plot_group_correlation_matrix(analysis_df, 'Logan', True)
+# Skip to plot_all_group_correlations to plot all possible groups and strokes
+#corr_matrix = plot_group_correlation_matrix(analysis_df, 'Logan', True)
 
 def plot_all_group_correlations(analysis_df):
     """
@@ -231,13 +234,19 @@ def plot_all_group_correlations(analysis_df):
         # Exclude 
         plot_group_correlation_matrix(analysis_df, group, include=False)
 
-# plot_all_group_correlations(analysis_df)
+plot_all_group_correlations(analysis_df)
 
-def analyze_group_differences(analysis_df):
+def analyze_group_differences(analysis_df, diff_threshold=0.15):
     """
-    Analyzes how each group's correlations differ from the team average.
-    Only compares included groups vs team average.
+    Analyzes how each group's correlations differ from the team average. Compares included groups vs team average.
+    If a caertain groups corellation between two metrics is significantyl lower or higher that the team average,
+    it could indicate the groups swimmers have a physiolgical weak spot or strength, or a race strategy weak spot or strength,
+    that the team does not.
     --->IN PROGRESS<----
+    
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data
+        diff_threshold (float, optional): Threshold for considering correlation differences meaningful. Defaults to 0.15.
     """
     # Get team-wide correlation matrix as baseline
     team_corr = plot_correlation_matrix(analysis_df)
@@ -246,8 +255,8 @@ def analyze_group_differences(analysis_df):
     strokes = analysis_df['Stroke'].unique()
     groups = analysis_df['Group'].unique()
     
-    # Set threshold for "meaningful" differences
-    diff_threshold = 0.15  # Adjust this value based on what you consider significant
+    # Set threshold 
+    diff_threshold = diff_threshold
     
     # Store notable differences
     notable_diffs = []
@@ -257,7 +266,7 @@ def analyze_group_differences(analysis_df):
         for group in group_list:
             # Get group correlation matrix
             group_df = analysis_df[analysis_df[group_type] == group]
-            group_corr = plot_correlation_matrix(group_df)  # Changed to regular correlation matrix
+            group_corr = plot_correlation_matrix(group_df)  
             
             # Calculate differences from team average
             diff_matrix = group_corr - team_corr
@@ -287,6 +296,6 @@ def analyze_group_differences(analysis_df):
     
     return results_df
 
-#group_differences = analyze_group_differences(analysis_df)
-#print(group_differences)
+group_differences = analyze_group_differences(analysis_df)
+print(group_differences)
 
