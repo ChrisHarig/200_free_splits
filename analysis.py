@@ -42,7 +42,7 @@ analysis_df['time_rank'] = analysis_df['Final'].rank()
 analysis_df['var_rank'] = analysis_df['std_dev'].rank()
 
 # Add the group and stroke columns to the analysis_df
-analysis_df = analysis_df.merge(groups_df[['Name', 'Group', 'Stroke']], on='Name', how='left')
+analysis_df = analysis_df.merge(groups_df[['Name', 'Coach', 'Stroke']], on='Name', how='left')
 
 def plot_consistency_vs_performance(analysis_df, show_names=False):
     """
@@ -109,6 +109,79 @@ def calculate_rank_correlations(analysis_df):
 
 #calculate_rank_correlations(analysis_df)
 
+def analyze_group_value_differences(analysis_df):
+    """
+    Analyzes how each group's averages differ from the team averages for key metrics.
+    
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data
+        
+    Returns:
+        pd.DataFrame: DataFrame containing differences between group averages and team averages
+    """
+    # Metrics to analyze
+    metrics = [
+        'Final', 'std_dev', 
+        'split4_3', 'split4_2', 'split4_1',
+        'split3_2', 'split3_1', 'split2_1',
+        'hundred_diff',
+        'first_100', 'second_100'
+    ]
+    
+    # Calculate team averages
+    team_means = analysis_df[metrics].mean()
+    
+    # Initialize list to store results
+    results = []
+    
+    # Check if both Stroke and Coach groupings exist
+    group_columns = []
+    if 'Stroke' in analysis_df.columns:
+        group_columns.append('Stroke')
+    if 'Coach' in analysis_df.columns:
+        group_columns.append('Coach')
+        
+    # Calculate differences for each group
+    for group_col in group_columns:
+        for group in analysis_df[group_col].unique():
+            group_data = analysis_df[analysis_df[group_col] == group]
+            group_means = group_data[metrics].mean()
+            
+            # Calculate absolute and percentage differences
+            abs_diff = group_means - team_means
+            pct_diff = (group_means - team_means) / team_means * 100
+            
+            # Create row with group info and differences
+            row = {
+                'Group_Type': group_col,
+                'Group': group
+            }
+            
+            # Add absolute and percentage differences for each metric
+            for metric in metrics:
+                row[f'{metric}_abs'] = abs_diff[metric]
+                row[f'{metric}_pct'] = pct_diff[metric]
+            
+            results.append(row)
+    
+    # Create DataFrame from results and set column order
+    diff_df = pd.DataFrame(results)
+    
+    # Reorder columns to put group info first, then pairs of abs/pct differences
+    cols = ['Group_Type', 'Group']
+    for metric in metrics:
+        cols.extend([f'{metric}_abs', f'{metric}_pct'])
+    
+    diff_df = diff_df[cols]
+    
+    # Save to CSV
+    diff_df.to_csv('team_plots/group_metric_differences.csv', index=False)
+    
+    return diff_df
+
+group_value_differences = analyze_group_value_differences(analysis_df)
+print(group_value_differences)
+
 def plot_correlation_matrix(analysis_df):
     """
     Creates a correlation matrix heatmap for all split-related metrics.
@@ -150,7 +223,7 @@ def plot_correlation_matrix(analysis_df):
     
     return corr_matrix
 
-corr_matrix = plot_correlation_matrix(analysis_df)
+#corr_matrix = plot_correlation_matrix(analysis_df)
 
 def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     """
@@ -166,8 +239,8 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     # Check if group exists in Stroke or Coach columns
     if group_name in analysis_df['Stroke'].unique():
         group_type = 'Stroke'
-    elif group_name in analysis_df['Group'].unique():
-        group_type = 'Group'
+    elif group_name in analysis_df['Coach'].unique():
+        group_type = 'Coach'
     else:
         raise ValueError(f"'{group_name}' not found in either Stroke or Coach columns")
         
@@ -217,31 +290,30 @@ def plot_all_group_correlations(analysis_df):
     Args:
         analysis_df (pd.DataFrame): DataFrame containing the analysis data
     """
-    # Get unique groups from both Stroke and Group columns
+    # Get unique groups from both Stroke and Coach columns
     strokes = analysis_df['Stroke'].unique()
-    groups = analysis_df['Group'].unique()
+    coaches = analysis_df['Coach'].unique()
     
-    # Create correlation matrices for each group
+    # Create correlation matrices for each groupCreate another method that does the same thing as analyze_group_differences but for differences in the values, not correlations. So for each group, if there is a large difference in their average split4_1 or std_deviation and so on, record that
     for group in strokes:
         # Include 
         plot_group_correlation_matrix(analysis_df, group, include=True)
         # Exclude 
         plot_group_correlation_matrix(analysis_df, group, include=False)
         
-    for group in groups:
+    for coach in coaches:
         # Include 
-        plot_group_correlation_matrix(analysis_df, group, include=True)
+        plot_group_correlation_matrix(analysis_df, coach, include=True)
         # Exclude 
-        plot_group_correlation_matrix(analysis_df, group, include=False)
+        plot_group_correlation_matrix(analysis_df, coach, include=False)
 
-plot_all_group_correlations(analysis_df)
+#plot_all_group_correlations(analysis_df)
 
-def analyze_group_differences(analysis_df, diff_threshold=0.15):
+def analyze_group_correlation_differences(analysis_df, diff_threshold=0.15):
     """
     Analyzes how each group's correlations differ from the team average. Compares included groups vs team average.
-    If a caertain groups corellation between two metrics is significantyl lower or higher that the team average,
-    it could indicate the groups swimmers have a physiolgical weak spot or strength, or a race strategy weak spot or strength,
-    that the team does not.
+    If a certain groups corellation between two metrics is significantly lower or higher that the team average,
+    it indicates the relationship between two metrics is stronger or weaker for the selected subset of swimmers.
     --->IN PROGRESS<----
     
     Args:
@@ -251,9 +323,9 @@ def analyze_group_differences(analysis_df, diff_threshold=0.15):
     # Get team-wide correlation matrix as baseline
     team_corr = plot_correlation_matrix(analysis_df)
     
-    # Get unique groups from both Stroke and Group columns
+    # Get unique groups from both Stroke and Coach columns
     strokes = analysis_df['Stroke'].unique()
-    groups = analysis_df['Group'].unique()
+    coaches = analysis_df['Coach'].unique()
     
     # Set threshold 
     diff_threshold = diff_threshold
@@ -262,7 +334,7 @@ def analyze_group_differences(analysis_df, diff_threshold=0.15):
     notable_diffs = []
     
     # Analyze each group type
-    for group_type, group_list in [('Stroke', strokes), ('Group', groups)]:
+    for group_type, group_list in [('Stroke', strokes), ('Coach', coaches)]:
         for group in group_list:
             # Get group correlation matrix
             group_df = analysis_df[analysis_df[group_type] == group]
@@ -271,7 +343,7 @@ def analyze_group_differences(analysis_df, diff_threshold=0.15):
             # Calculate differences from team average
             diff_matrix = group_corr - team_corr
             
-            # Find meaningful differences
+            # Find and record meaningful differences
             for i in range(len(diff_matrix.index)):
                 for j in range(i+1, len(diff_matrix.columns)):
                     diff = diff_matrix.iloc[i,j]
@@ -291,11 +363,15 @@ def analyze_group_differences(analysis_df, diff_threshold=0.15):
     results_df['abs_diff'] = results_df['difference'].abs()
     results_df = results_df.sort_values('abs_diff', ascending=False)
     
+    # Save results to CSV
+    results_df.to_csv('team_plots/notable_group_correlation_differences.csv', index=False)
+    
     print("\nNotable Correlation Differences from Team Average:")
     print(results_df.to_string(index=False))
     
     return results_df
 
-group_differences = analyze_group_differences(analysis_df)
-print(group_differences)
+#group_differences = analyze_group_correlation_differences(analysis_df, .30)
+#print(group_differences)
+
 
