@@ -4,6 +4,8 @@ import scipy.stats as stats
 import seaborn as sns
 import os
 
+###---------------------------------------DATA PREP START---------------------------------------###
+
 def create_local_analysis_df():
     """
     Creates analysis DataFrame with split times, calculated metrics, and group data.
@@ -27,21 +29,21 @@ def create_local_analysis_df():
 
     # Calculate mean and std dev for each swimmer
     split_cols = ['Split1', 'Split2', 'Split3', 'Split4']
-    local_analysis_df['mean'] = local_analysis_df[split_cols].mean(axis=1)
+    local_analysis_df['mean'] = local_analysis_df[split_cols].mean(axis=1).round(2)
     local_analysis_df['std_dev'] = local_analysis_df[split_cols].std(axis=1)
 
     # Add all possible split differences
-    local_analysis_df['split4_3'] = local_analysis_df['Split4'] - local_analysis_df['Split3']  
-    local_analysis_df['split4_2'] = local_analysis_df['Split4'] - local_analysis_df['Split2']
-    local_analysis_df['split4_1'] = local_analysis_df['Split4'] - local_analysis_df['Split1']  
-    local_analysis_df['split3_2'] = local_analysis_df['Split3'] - local_analysis_df['Split2']
-    local_analysis_df['split3_1'] = local_analysis_df['Split3'] - local_analysis_df['Split1']
-    local_analysis_df['split2_1'] = local_analysis_df['Split2'] - local_analysis_df['Split1']  
+    local_analysis_df['split4_3'] = local_analysis_df['Split4'] - local_analysis_df['Split3'].round(2)
+    local_analysis_df['split4_2'] = local_analysis_df['Split4'] - local_analysis_df['Split2'].round(2)
+    local_analysis_df['split4_1'] = local_analysis_df['Split4'] - local_analysis_df['Split1'].round(2)  
+    local_analysis_df['split3_2'] = local_analysis_df['Split3'] - local_analysis_df['Split2'].round(2)
+    local_analysis_df['split3_1'] = local_analysis_df['Split3'] - local_analysis_df['Split1'].round(2)
+    local_analysis_df['split2_1'] = local_analysis_df['Split2'] - local_analysis_df['Split1'].round(2)
 
     # Calculate first 100 vs second 100 difference
     local_analysis_df['first_100'] = local_analysis_df[['Split1', 'Split2']].sum(axis=1)
-    local_analysis_df['second_100'] = local_analysis_df[['Split3', 'Split4']].sum(axis=1)
-    local_analysis_df['hundred_diff'] = local_analysis_df['second_100'] - local_analysis_df['first_100']
+    local_analysis_df['second_100'] = local_analysis_df[['Split3', 'Split4']].sum(axis=1).round(2)
+    local_analysis_df['hundred_diff'] = (local_analysis_df['second_100'] - local_analysis_df['first_100']).round(2)
 
     # Add rankings based on time (faster times = better rank)
     local_analysis_df['time_rank'] = local_analysis_df['Final'].rank()
@@ -55,6 +57,10 @@ def create_local_analysis_df():
     return local_analysis_df
 
 local_analysis_df = create_local_analysis_df()
+
+###---------------------------------------DATA PREP END---------------------------------------###
+
+###---------------------------------------TEAM WIDE ANALYSIS START---------------------------------------###
 
 def plot_consistency_vs_performance(analysis_df, show_names=False):
     """
@@ -80,6 +86,7 @@ def plot_consistency_vs_performance(analysis_df, show_names=False):
     correlation = analysis_df['std_dev'].corr(analysis_df['Final'])
     print(f"Correlation between consistency and final time: {correlation:.3f}")
     
+    plt.show()
     plt.savefig('team_plots/consistency_vs_performance.png')
     plt.close()
 
@@ -157,12 +164,18 @@ def plot_correlation_matrix(analysis_df):
     
     plt.title('Correlation Matrix Team Wide')
     plt.tight_layout()
+    plt.show()
+
     plt.savefig('team_plots/correlation_matrix.png')
     plt.close()
     
     return corr_matrix
 
 #corr_matrix = plot_correlation_matrix(local_analysis_df)
+
+###---------------------------------------TEAM WIDE ANALYSIS END---------------------------------------###
+
+###---------------------------------------GROUPED ANALYSIS START---------------------------------------###
 
 def analyze_group_value_differences(analysis_df):
     """
@@ -382,4 +395,4 @@ def analyze_group_correlation_differences(analysis_df, diff_threshold=0.15):
 #group_differences = analyze_group_correlation_differences(local_analysis_df, .30)
 #print(group_differences.to_string(index=False))
 
-
+###---------------------------------------GROUPED ANALYSIS END---------------------------------------###
