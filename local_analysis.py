@@ -4,45 +4,57 @@ import scipy.stats as stats
 import seaborn as sns
 import os
 
-# Read the CSV
-splits_df = pd.read_csv('data/swim_splits.csv')
-groups_df = pd.read_csv('data/group_stroke.csv')
+def create_local_analysis_df():
+    """
+    Creates analysis DataFrame with split times, calculated metrics, and group data.
+    Processes raw data into format needed for analysis functions.
+    
+    Returns:
+        pd.DataFrame: Analysis-ready DataFrame with calculated metrics
+    """
+    # Read the CSV
+    splits_df = pd.read_csv('data/swim_splits.csv')
+    groups_df = pd.read_csv('data/group_stroke.csv')
 
-# Get only numeric columns (excluding name column)
-numeric_cols = splits_df.select_dtypes(include=['float64', 'int64']).columns
+    # Get only numeric columns (excluding name column)
+    numeric_cols = splits_df.select_dtypes(include=['float64', 'int64']).columns
 
-# Create analysis df with all original columns
-analysis_df = splits_df.copy()
+    # Create analysis df with all original columns
+    local_analysis_df = splits_df.copy()
 
-# Convert Final times from MM:SS.XX format to seconds
-analysis_df['Final'] = analysis_df['Final'].apply(lambda x: float(x.split(':')[0])*60 + float(x.split(':')[1]))
+    # Convert Final times from MM:SS.XX format to seconds
+    local_analysis_df['Final'] = local_analysis_df['Final'].apply(lambda x: float(x.split(':')[0])*60 + float(x.split(':')[1]))
 
-# Calculate mean and std dev for each swimmer
-split_cols = ['Split1', 'Split2', 'Split3', 'Split4']
-analysis_df['mean'] = analysis_df[split_cols].mean(axis=1)
-analysis_df['std_dev'] = analysis_df[split_cols].std(axis=1)
+    # Calculate mean and std dev for each swimmer
+    split_cols = ['Split1', 'Split2', 'Split3', 'Split4']
+    local_analysis_df['mean'] = local_analysis_df[split_cols].mean(axis=1)
+    local_analysis_df['std_dev'] = local_analysis_df[split_cols].std(axis=1)
 
-# Add all possible split differences
-analysis_df['split4_3'] = analysis_df['Split4'] - analysis_df['Split3']  
-analysis_df['split4_2'] = analysis_df['Split4'] - analysis_df['Split2']
-analysis_df['split4_1'] = analysis_df['Split4'] - analysis_df['Split1']  
-analysis_df['split3_2'] = analysis_df['Split3'] - analysis_df['Split2']
-analysis_df['split3_1'] = analysis_df['Split3'] - analysis_df['Split1']
-analysis_df['split2_1'] = analysis_df['Split2'] - analysis_df['Split1']  
+    # Add all possible split differences
+    local_analysis_df['split4_3'] = local_analysis_df['Split4'] - local_analysis_df['Split3']  
+    local_analysis_df['split4_2'] = local_analysis_df['Split4'] - local_analysis_df['Split2']
+    local_analysis_df['split4_1'] = local_analysis_df['Split4'] - local_analysis_df['Split1']  
+    local_analysis_df['split3_2'] = local_analysis_df['Split3'] - local_analysis_df['Split2']
+    local_analysis_df['split3_1'] = local_analysis_df['Split3'] - local_analysis_df['Split1']
+    local_analysis_df['split2_1'] = local_analysis_df['Split2'] - local_analysis_df['Split1']  
 
-# Calculate first 100 vs second 100 difference
-analysis_df['first_100'] = analysis_df[['Split1', 'Split2']].sum(axis=1)
-analysis_df['second_100'] = analysis_df[['Split3', 'Split4']].sum(axis=1)
-analysis_df['hundred_diff'] = analysis_df['second_100'] - analysis_df['first_100']
+    # Calculate first 100 vs second 100 difference
+    local_analysis_df['first_100'] = local_analysis_df[['Split1', 'Split2']].sum(axis=1)
+    local_analysis_df['second_100'] = local_analysis_df[['Split3', 'Split4']].sum(axis=1)
+    local_analysis_df['hundred_diff'] = local_analysis_df['second_100'] - local_analysis_df['first_100']
 
-# Add rankings based on time (faster times = better rank)
-analysis_df['time_rank'] = analysis_df['Final'].rank()
+    # Add rankings based on time (faster times = better rank)
+    local_analysis_df['time_rank'] = local_analysis_df['Final'].rank()
 
-# Add rankings based on consistency (lower std dev = better rank)
-analysis_df['var_rank'] = analysis_df['std_dev'].rank()
+    # Add rankings based on consistency (lower std dev = better rank)
+    local_analysis_df['var_rank'] = local_analysis_df['std_dev'].rank()
 
-# Add the group and stroke columns to the analysis_df
-analysis_df = analysis_df.merge(groups_df[['Name', 'Coach', 'Stroke']], on='Name', how='left')
+    # Add the group and stroke columns to the analysis_df
+    local_analysis_df = local_analysis_df.merge(groups_df[['Name', 'Coach', 'Stroke']], on='Name', how='left')
+    
+    return local_analysis_df
+
+local_analysis_df = create_local_analysis_df()
 
 def plot_consistency_vs_performance(analysis_df, show_names=False):
     """
@@ -71,7 +83,7 @@ def plot_consistency_vs_performance(analysis_df, show_names=False):
     plt.savefig('team_plots/consistency_vs_performance.png')
     plt.close()
 
-#plot_consistency_vs_performance(analysis_df)
+#plot_consistency_vs_performance(local_analysis_df)
 
 def calculate_rank_correlations(analysis_df):
     """
@@ -107,7 +119,50 @@ def calculate_rank_correlations(analysis_df):
     
     return rank_corr
 
-#calculate_rank_correlations(analysis_df)
+#calculate_rank_correlations(local_analysis_df)
+
+def plot_correlation_matrix(analysis_df):
+    """
+    Creates a correlation matrix heatmap for all split-related metrics.
+    --->- No one split difference is correlated with final time
+        - Both the fade from the initial pace to the third 50 (split3_1) 
+        and the fade from the initial pace to the fourth 50 (split4_1) are 
+        correlated with std_dev, but the third 50 accounts for more variance .94 > .90
+        - split2_1 and split3_1 are highly correlated (.99), split3_1 and split3_2 are also highly correlated (.98), indicating 
+        that one dropoff may account for the other, or there is a kind of physiological rule that forces this pattern.
+        - IN PROGRESS<---
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data
+    """
+    # Select relevant columns for correlation
+    cols_to_correlate = [
+        'Final', 'std_dev',
+        'split4_3', 'split4_2', 'split4_1',
+        'split3_2', 'split3_1', 'split2_1',
+        'hundred_diff',
+        'first_100', 'second_100'
+    ]
+    
+    # Calculate correlation matrix
+    corr_matrix = analysis_df[cols_to_correlate].corr()
+    
+    # Create heatmap
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(corr_matrix, 
+                annot=True,          
+                cmap='RdBu',         
+                center=0,           
+                fmt='.2f',          
+                square=True)         
+    
+    plt.title('Correlation Matrix Team Wide')
+    plt.tight_layout()
+    plt.savefig('team_plots/correlation_matrix.png')
+    plt.close()
+    
+    return corr_matrix
+
+#corr_matrix = plot_correlation_matrix(local_analysis_df)
 
 def analyze_group_value_differences(analysis_df):
     """
@@ -179,51 +234,7 @@ def analyze_group_value_differences(analysis_df):
     
     return diff_df
 
-group_value_differences = analyze_group_value_differences(analysis_df)
-print(group_value_differences)
-
-def plot_correlation_matrix(analysis_df):
-    """
-    Creates a correlation matrix heatmap for all split-related metrics.
-    --->- No one split difference is correlated with final time
-        - Both the fade from the initial pace to the third 50 (split3_1) 
-        and the fade from the initial pace to the fourth 50 (split4_1) are 
-        correlated with std_dev, but the third 50 accounts for more variance .94 > .90
-        - split2_1 and split3_1 are highly correlated (.99), split3_1 and split3_2 are also highly correlated (.98), indicating 
-        that one dropoff may account for the other, or there is a kind of physiological rule that forces this pattern.
-        - IN PROGRESS<---
-    Args:
-        analysis_df (pd.DataFrame): DataFrame containing the analysis data
-    """
-    # Select relevant columns for correlation
-    cols_to_correlate = [
-        'Final', 'std_dev',
-        'split4_3', 'split4_2', 'split4_1',
-        'split3_2', 'split3_1', 'split2_1',
-        'hundred_diff',
-        'first_100', 'second_100'
-    ]
-    
-    # Calculate correlation matrix
-    corr_matrix = analysis_df[cols_to_correlate].corr()
-    
-    # Create heatmap
-    plt.figure(figsize=(12, 10))
-    sns.heatmap(corr_matrix, 
-                annot=True,          
-                cmap='RdBu',         
-                center=0,           
-                fmt='.2f',          
-                square=True)         
-    
-    plt.title('Correlation Matrix Team Wide')
-    plt.tight_layout()
-    plt.savefig('team_plots/correlation_matrix.png')
-    plt.close()
-    
-    return corr_matrix
-
-#corr_matrix = plot_correlation_matrix(analysis_df)
+#group_value_differences = analyze_group_value_differences(local_analysis_df)
 
 def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     """
@@ -281,7 +292,7 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     return group_corr
 
 # Skip to plot_all_group_correlations to plot all possible groups and strokes
-#corr_matrix = plot_group_correlation_matrix(analysis_df, 'Logan', True)
+#corr_matrix = plot_group_correlation_matrix(local_analysis_df, 'Logan', True)
 
 def plot_all_group_correlations(analysis_df):
     """
@@ -307,7 +318,7 @@ def plot_all_group_correlations(analysis_df):
         # Exclude 
         plot_group_correlation_matrix(analysis_df, coach, include=False)
 
-#plot_all_group_correlations(analysis_df)
+#plot_all_group_correlations(local_analysis_df)
 
 def analyze_group_correlation_differences(analysis_df, diff_threshold=0.15):
     """
@@ -366,12 +377,9 @@ def analyze_group_correlation_differences(analysis_df, diff_threshold=0.15):
     # Save results to CSV
     results_df.to_csv('team_plots/notable_group_correlation_differences.csv', index=False)
     
-    print("\nNotable Correlation Differences from Team Average:")
-    print(results_df.to_string(index=False))
-    
     return results_df
 
-#group_differences = analyze_group_correlation_differences(analysis_df, .30)
-#print(group_differences)
+#group_differences = analyze_group_correlation_differences(local_analysis_df, .30)
+#print(group_differences.to_string(index=False))
 
 
