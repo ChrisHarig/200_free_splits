@@ -63,13 +63,11 @@ def create_ncaa_analysis_df():
     
     return ncaa_analysis_df
 
-# Create the NCAA analysis DataFrame
 ncaa_analysis_df = create_ncaa_analysis_df()
-print(ncaa_analysis_df.head())
 
 ###---------------------------------------DATA PREP END---------------------------------------###
 
-###---------------------------------------ANALYSIS START---------------------------------------###
+###---------------------------------------VARIANCE ANALYSIS START---------------------------------------###
 
 def plot_consistency_vs_performance(analysis_df, show_names=False):
     """
@@ -98,7 +96,7 @@ def plot_consistency_vs_performance(analysis_df, show_names=False):
     plt.savefig('ncaa_plots/consistency_vs_performance.png')
     plt.close()
 
-plot_consistency_vs_performance(ncaa_analysis_df, show_names=False)
+#plot_consistency_vs_performance(ncaa_analysis_df, show_names=False)
 
 def calculate_rank_correlations(analysis_df):
     """
@@ -134,7 +132,7 @@ def calculate_rank_correlations(analysis_df):
     
     return rank_corr
 
-calculate_rank_correlations(ncaa_analysis_df)
+#calculate_rank_correlations(ncaa_analysis_df)
 
 def plot_correlation_matrix(analysis_df):
     """
@@ -173,6 +171,41 @@ def plot_correlation_matrix(analysis_df):
     
     return corr_matrix
 
-plot_correlation_matrix(ncaa_analysis_df)
+#plot_correlation_matrix(ncaa_analysis_df)
 
-###---------------------------------------ANALYSIS END---------------------------------------###
+###---------------------------------------VARIANCE ANALYSIS END---------------------------------------###
+
+###---------------------------------------SPLIT DROP OFFS START---------------------------------------###
+def analyze_split_dropoffs(analysis_df):
+    """
+    Calculates summary statistics (mean, max, min) for all split dropoff metrics.
+    
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data with split metrics
+    
+    Returns:
+        pd.DataFrame: Summary statistics for each split dropoff metric
+    """
+    # Define split dropoff columns
+    split_cols = ['split4_3', 'split4_2', 'split4_1', 'split3_2', 'split3_1', 'split2_1']
+    
+    # Calculate statistics
+    stats = {
+        'Mean': analysis_df[split_cols].mean(),
+        'Max': analysis_df[split_cols].max(),
+        'Min': analysis_df[split_cols].min()
+    }
+    
+    # Convert to DataFrame for nice formatting
+    stats_df = pd.DataFrame(stats).round(3)
+
+    # Print full DataFrame
+    print("\nSplit Dropoff Statistics:")
+    print(stats_df.to_string())
+    
+    return stats_df
+
+split_stats = analyze_split_dropoffs(ncaa_analysis_df)
+
+###---------------------------------------SPLIT DROP OFFS END---------------------------------------###
+

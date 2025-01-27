@@ -242,8 +242,12 @@ def analyze_group_value_differences(analysis_df):
     
     diff_df = diff_df[cols]
     
-    # Save to CSV
+    # Save to CSV 
     diff_df.to_csv('team_plots/group_metric_differences.csv', index=False)
+
+    # Print full DataFrame
+    print("\nGroup Metric Differences:")
+    print(diff_df.to_string(index=False))
     
     return diff_df
 
@@ -301,7 +305,7 @@ def plot_group_correlation_matrix(analysis_df, group_name, include=True):
     plt.tight_layout()
     plt.savefig(f'team_plots/correlation_matrix_{suffix}.png')
     plt.close()
-
+    
     return group_corr
 
 # Skip to plot_all_group_correlations to plot all possible groups and strokes
@@ -396,3 +400,100 @@ def analyze_group_correlation_differences(analysis_df, diff_threshold=0.15):
 #print(group_differences.to_string(index=False))
 
 ###---------------------------------------GROUPED ANALYSIS END---------------------------------------###
+
+###---------------------------------------SPLIT DROP OFFS START---------------------------------------###
+
+def analyze_split_dropoffs(analysis_df):
+    """
+    Calculates summary statistics (mean, max, min) for all split dropoff metrics.
+    
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data with split metrics
+    
+    Returns:
+        pd.DataFrame: Summary statistics for each split dropoff metric
+    """
+    # Define split dropoff columns
+    split_cols = ['split4_3', 'split4_2', 'split4_1', 'split3_2', 'split3_1', 'split2_1']
+    
+    # Calculate statistics
+    stats = {
+        'Mean': analysis_df[split_cols].mean(),
+        'Max': analysis_df[split_cols].max(),
+        'Min': analysis_df[split_cols].min()
+    }
+    
+    # Convert to DataFrame for nice formatting
+    stats_df = pd.DataFrame(stats).round(3)
+
+    # Print full DataFrame
+    print("\nSplit Dropoff Statistics:")
+    print(stats_df.to_string())
+    
+    return stats_df
+
+split_stats = analyze_split_dropoffs(local_analysis_df)
+
+def analyze_group_split_dropoffs(analysis_df, group_type):
+    """
+    Calculates summary statistics (mean, max, min) for all split dropoff metrics by group.
+    
+    Args:
+        analysis_df (pd.DataFrame): DataFrame containing the analysis data with split metrics
+        group_type (str): Column name to group by (e.g. 'Stroke' or 'Coach')
+    
+    Returns:
+        dict: Dictionary mapping each group to its summary statistics DataFrame
+    """
+    # Define split dropoff columns
+    split_cols = ['split4_3', 'split4_2', 'split4_1', 'split3_2', 'split3_1', 'split2_1']
+    
+    # Get unique groups
+    groups = analysis_df[group_type].unique()
+    
+    # Store results for each group
+    group_stats = {}
+    
+    for group in groups:
+        # Filter data for this group
+        group_df = analysis_df[analysis_df[group_type] == group]
+        
+        # Calculate statistics for this group
+        stats = {
+            'Mean': group_df[split_cols].mean(),
+            'Max': group_df[split_cols].max(),
+            'Min': group_df[split_cols].min()
+        }
+        
+        # Convert to DataFrame and round
+        stats_df = pd.DataFrame(stats).round(3)
+        
+        # Store in results dictionary
+        group_stats[group] = stats_df
+        
+        # Print results for this group
+        print(f"\nSplit Dropoff Statistics for {group} {group_type}:")
+        print(stats_df.to_string())
+
+        # Save to CSV
+        filename = f'local_analysis_stats/{group_type.lower()}_{group.lower()}_split_stats.csv'
+        stats_df.to_csv(filename)
+    
+    return group_stats
+
+# Method below calculates for each group
+#stroke_stats = analyze_group_split_dropoffs(local_analysis_df, 'Stroke')
+#coach_stats = analyze_group_split_dropoffs(local_analysis_df, 'Coach')
+
+def analyze_all_group_split_dropoffs():
+    """
+    Analyzes split dropoff statistics for all stroke and coach groups by calling
+    analyze_group_split_dropoffs() for each group type.
+    """
+    group_types = ['Stroke', 'Coach']
+    
+    for group_type in group_types:
+        print(f"\n{'-'*20} {group_type} Analysis {'-'*20}")
+        group_stats = analyze_group_split_dropoffs(local_analysis_df, group_type)
+
+#analyze_all_group_split_dropoffs()

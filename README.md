@@ -63,3 +63,4 @@ Using data from the ASU men's swim team:
 - Compare NCAA top 16 performance average correlations to individuals
 - Morning vs Afternoon performance on NCAA top 16
 - Track sprinter vs mid distance vs long distance
+- Make group feature for coaches to select their own group 
